@@ -1,0 +1,13 @@
+[
+    {
+        "item_name": "目標資料夾",
+        "edge_config": {
+            "KernelSize": 5,
+            "ErodeIter": 4,
+            "DilateIter": 1,
+            "Canny1": 100,
+            "Canny2": 200
+        },
+        "image_path": "...."
+    }
+]
