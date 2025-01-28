@@ -72,7 +72,8 @@ class ObjectDetection:
     def _edge_filter_task(self, edge_parms: dict, tolerance: float, max_results: int) -> None:
         edgefilter = EdgeFilter.create_by_dict(edge_parms)
         background_image = edgefilter.apply_edge_filter(self.screenshot)
-        neddle_image = edgefilter.apply_edge_filter(self.neddle_image)
+        # neddle_image = edgefilter.apply_edge_filter(self.neddle_image)
+        neddle_image = self.neddle_image
 
         with self.lock:
             self.rectangles.extend(self.process_rectangles(background_image, neddle_image, tolerance, max_results))
@@ -150,8 +151,13 @@ class ObjectDetection:
         # "Relative difference between sides of the rectangles to merge them into a group."
         rectangles, weights = cv.groupRectangles(rectangles, groupThreshold=1, eps=0.5)
 
-        # sorted method : return top (specific_number) most relevant search results
-        rectangles = in_order_rect(result, rectangles)[:max_results]
+        # sorted method
+        rectangles = in_order_rect(result, rectangles)
+
+        # 篩選最佳的前 max_results 結果
+        if len(rectangles) > max_results:
+            rectangles = rectangles[:max_results]
+
         rectangles = [rect.tolist() for rect in rectangles]
         return rectangles
 
@@ -160,34 +166,6 @@ class ObjectDetection:
         self.futures.clear()  # 清空 futures，防止再次使用
 
     ########################################### GET RESULT ################################################
-
-    def get_result(self, tolerance: float = 0.7, max_results: int = 10) -> list[list[int, int]]:
-        '''
-        @return : get click point / center point of elements =>
-            [
-                [x1,y1],
-                [x2,y2],
-                ...
-            ]
-        '''
-
-        # 等待所有異步線程執行完成
-        self.end()
-
-        with self.lock:
-            if self.rectangles:
-                # duplicate twice
-                self.rectangles.extend(self.rectangles)
-                self.rectangles = self.process_rectangles(self.screenshot, self.neddle_image , tolerance, max_results)
-
-            # get the results of the rectangles as center points
-            results = []
-            for (x, y, w, h) in self.rectangles:
-                results.append([
-                    x + w // 2, 
-                    y + h // 2
-                ])
-        return results
     
     # given a list of [x, y, w, h] rectangles and a canvas image to draw on, return an image with
     # all of those rectangles drawn
@@ -232,3 +210,36 @@ class ObjectDetection:
             # draw the center point
             cv.drawMarker(bacground_image, (center_x, center_y), marker_color, marker_type, 25, 3)
         return bacground_image
+    
+    @property
+    def get_result(self, tolerance: float = 0.7, max_results: int = 10) -> list[list[int, int]]:
+        '''
+        @return : get click point / center point of elements =>
+            [
+                [x1,y1],
+                [x2,y2],
+                ...
+            ]
+        '''
+
+        # 等待所有異步線程執行完成
+        self.end()
+
+        with self.lock:
+            if self.rectangles:
+                # duplicate twice
+                self.rectangles.extend(self.rectangles)
+                self.rectangles = self.process_rectangles(self.screenshot, self.neddle_image , tolerance, max_results)
+
+            # get the results of the rectangles as center points
+            results = []
+            for (x, y, w, h) in self.rectangles:
+                results.append([
+                    x + w // 2, 
+                    y + h // 2
+                ])
+        return results
+    
+    @property
+    def get_res_item_len(self) -> int :
+        return len(self.rectangles)

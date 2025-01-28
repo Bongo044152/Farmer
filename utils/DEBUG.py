@@ -219,16 +219,11 @@ def edge_filter_debug(dictionary: dict = None) -> None:
 
 # 程式執行的地方
 if __name__ == '__main__':
-    h = {
-        "hMin": 21,
-        "sMin": 62,
-        "vMin": 255,
-        "hMax": 23,
-        "sMax": 203,
-        "vMax": 255,
-        "sAdd": 33,
-        "sSub": 32,
-        "vAdd": 255,
-        "vSub": 0
+    e = {
+        "KernelSize": 10,
+        "ErodeIter": 1,
+        "DilateIter": 0,
+        "Canny1": 200,
+        "Canny2": 500
     }
-    hsv_filter_debug(h)
+    edge_filter_debug(e)

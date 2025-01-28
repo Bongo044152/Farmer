@@ -12,27 +12,22 @@ wincap.start()
 
 current_time = time()
 
-h = {
-    "hMin": 21,
-    "sMin": 62,
-    "vMin": 255,
-    "hMax": 23,
-    "sMax": 203,
-    "vMax": 255,
-    "sAdd": 33,
-    "sSub": 32,
-    "vAdd": 255,
-    "vSub": 0
+e = {
+    "KernelSize": 10,
+    "ErodeIter": 1,
+    "DilateIter": 0,
+    "Canny1": 200,
+    "Canny2": 500
 }
 
 try:
-    target = ObjectDetection("./img/target.png")
+    target = ObjectDetection("./img/target2.png")
     while True:
         # wait until screenshot is ready
         if wincap.screenshot is None:
             continue
 
-        result = target.update_background_image(wincap.screenshot).find_muti(0.7, 10).debug_draw_rectangles()
+        result = target.update_background_image(wincap.screenshot).edge_filter_method(e, 0.4, 20).debug_draw_rectangles()
         show_image("Result", result)
 
         print(f"FPS: {1 / (time() - current_time)}")

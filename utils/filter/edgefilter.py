@@ -74,14 +74,14 @@ class EdgeFilter:
     
     # given an image and a Canny edge filter, apply the filter and return the resulting image.
     # if a filter is not supplied, the control GUI trackbars will be used
-    def apply_edge_filter(self, original_image: np.ndarray, edge_filter: 'EdgeFilter'):
+    def apply_edge_filter(self, original_image: np.ndarray):
 
-        kernel = np.ones((edge_filter.kernelSize, edge_filter.kernelSize), np.uint8)
-        eroded_image = cv.erode(original_image, kernel, iterations=edge_filter.erodeIter)
-        dilated_image = cv.dilate(eroded_image, kernel, iterations=edge_filter.dilateIter)
+        kernel = np.ones((self.kernelSize, self.kernelSize), np.uint8)
+        eroded_image = cv.erode(original_image, kernel, iterations=self.erodeIter)
+        dilated_image = cv.dilate(eroded_image, kernel, iterations=self.dilateIter)
 
         # canny edge detection
-        result = cv.Canny(dilated_image, edge_filter.canny1, edge_filter.canny2)
+        result = cv.Canny(dilated_image, self.canny1, self.canny2)
 
         # convert single channel image back to BGR
         img = cv.cvtColor(result, cv.COLOR_GRAY2BGR)
