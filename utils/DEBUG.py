@@ -143,8 +143,26 @@ def hsv_filter_debug(dictionary: dict = None) -> None:
             # waits 1 ms every loop to process key presses
             key = cv.waitKey(1)
             if key == ord('q'):
+
+                if hsvfilter is None:
+                    hsvfilter = HsvFilter.get_hsv_filter_from_controls()
                 wincap.end()
                 cv.destroyAllWindows()
+
+                import json
+                dictionary  = {}
+                dictionary['hMin'] = hsvfilter.hMin
+                dictionary['sMin'] = hsvfilter.sMin
+                dictionary['vMin'] = hsvfilter.vMin
+                dictionary['hMax'] = hsvfilter.hMax
+                dictionary['sMax'] = hsvfilter.sMax
+                dictionary['vMax'] = hsvfilter.vMax
+                dictionary['sAdd'] = hsvfilter.sAdd
+                dictionary['sSub'] = hsvfilter.sSub
+                dictionary['vAdd'] = hsvfilter.vAdd
+                dictionary['vSub'] = hsvfilter.vSub
+                print(json.dumps(dictionary, ensure_ascii=False, indent=4))
+
                 break
         print("END.")
     except Exception as e:
@@ -201,11 +219,16 @@ def edge_filter_debug(dictionary: dict = None) -> None:
 
 # 程式執行的地方
 if __name__ == '__main__':
-    hi = {
-        "KernelSize": 5,
-        "ErodeIter": 4,
-        "DilateIter": 1,
-        "Canny1": 100,
-        "Canny2": 200
+    h = {
+        "hMin": 21,
+        "sMin": 62,
+        "vMin": 255,
+        "hMax": 23,
+        "sMax": 203,
+        "vMax": 255,
+        "sAdd": 33,
+        "sSub": 32,
+        "vAdd": 255,
+        "vSub": 0
     }
-    edge_filter_debug()
+    hsv_filter_debug(h)

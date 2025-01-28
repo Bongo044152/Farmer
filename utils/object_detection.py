@@ -22,7 +22,7 @@ import os
 
 class ObjectDetection:
 
-    def __init__(self, screenshot: np.ndarray, target_image_path: str, process_function: Callable, method: int = cv.TM_CCOEFF_NORMED) -> None:
+    def __init__(self, target_image_path: str, method: int = cv.TM_CCOEFF_NORMED) -> None:
         # 線程保護
         self.lock = Lock()
 
@@ -35,16 +35,20 @@ class ObjectDetection:
             raise FileNotFoundError(f"The file does not exist: {target_image_path}")
 
         self.neddle_image = cv.imread(target_image_path, cv.IMREAD_COLOR_BGR)
-        self.screenshot = screenshot
+        self.needle_w = self.neddle_image.shape[1]
+        self.needle_h = self.neddle_image.shape[0]
 
         self.method = method
         self.rectangles = []
 
-        self.process_function = process_function # recall function
-
         # Initialize thread pool executor
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
         self.futures = []  # 用來存放每個線程的 future 物件
+    
+    def update_background_image(self, background_image: np.ndarray) -> 'ObjectDetection':
+        self.screenshot = background_image
+        self.rectangles.clear()
+        return self
 
     def hsl_filter_method(self, hsl_parms: dict, tolerance: float = 0.7, max_results: int = 10) -> 'ObjectDetection':
         future = self.executor.submit(self._hsl_filter_task, hsl_parms, tolerance, max_results)
@@ -54,7 +58,8 @@ class ObjectDetection:
     def _hsl_filter_task(self, hsl_parms: dict, tolerance: float, max_results: int) -> None:
         hsvfilter = HsvFilter.create_by_dict(hsl_parms)
         background_image = hsvfilter.apply_hsv_filter(self.screenshot)
-        neddle_image = hsvfilter.apply_hsv_filter(self.neddle_image)
+        # neddle_image = hsvfilter.apply_hsv_filter(self.neddle_image)
+        neddle_image = self.neddle_image
 
         with self.lock:
             self.rectangles.extend(self.process_rectangles(background_image, neddle_image, tolerance, max_results))
@@ -85,7 +90,7 @@ class ObjectDetection:
             if max_val > tolerance:
                 with self.lock:
                     self.rectangles = [
-                        [max_loc[0], max_loc[1], self.neddle_image.shape[1], self.neddle_image.shape[0]]
+                        [max_loc[0], max_loc[1], self.needle_w, self.needle_h]
                     ]
             else:
                 print(f"精確值過低! {max_val}，低於期望 {tolerance}，因此不採用!")
@@ -94,7 +99,7 @@ class ObjectDetection:
 
 
     def find_muti(self, tolerance:float = 0.8, max_results: int = 5) -> 'ObjectDetection' :
-        future = self.executor.submit(self._find_task, tolerance, max_results)
+        future = self.executor.submit(self._find_muti_task, tolerance, max_results)
         self.futures.append(future)
 
         return self
@@ -107,10 +112,18 @@ class ObjectDetection:
             print(e)
 
 
-    def process_rectangles(self, background_image: np.ndarray, needle_image: np.ndarray, tolerance: float=0.7, max_results: int=10) -> list:
+    def process_rectangles(self, background_image: np.ndarray, neddle_image: np.ndarray, tolerance: float=0.7, max_results: int=10) -> list:
 
+        def in_order_rect(match_res: np.ndarray, rectangles: list[list[int, int, int, int]]) -> list[int, int, int, int]:
+            '''
+            in order the result from searched locations
+            '''
+            rectangles = [(rect, match_res[rect[1],rect[0]]) for rect in rectangles] ## 注意! match_res[y, x]
+            rectangles = sorted(rectangles, key=lambda x : x[1], reverse=True)
+            return [i[0] for i in rectangles]
+        
         # run the OpenCV algorithm
-        result = cv.matchTemplate(background_image, needle_image, self.method)
+        result = cv.matchTemplate(background_image, neddle_image, self.method)
 
         # Get the all the positions from the match result that exceed our threshold
         locations = np.where(result >= tolerance)
@@ -120,14 +133,6 @@ class ObjectDetection:
         # concatenate together results without causing an error
         if not locations:
             return np.array([], dtype=np.int32).reshape(0, 4)
-
-        # sorted method
-        match_values = result[locations]
-        sorted_locations = sorted(zip(locations, match_values), key=lambda x: x[1], reverse=True)
-
-        # for performance reasons, return a limited number of results.
-        # these aren't necessarily the best results.
-        locations = [loc for loc, _ in sorted_locations][:max_results]
 
         # You'll notice a lot of overlapping rectangles get drawn. We can eliminate those redundant
         # locations by using groupRectangles().
@@ -145,11 +150,16 @@ class ObjectDetection:
         # "Relative difference between sides of the rectangles to merge them into a group."
         rectangles, weights = cv.groupRectangles(rectangles, groupThreshold=1, eps=0.5)
 
+        # sorted method : return top (specific_number) most relevant search results
+        rectangles = in_order_rect(result, rectangles)[:max_results]
+        rectangles = [rect.tolist() for rect in rectangles]
         return rectangles
 
     def end(self):
         concurrent.futures.wait(self.futures)
         self.futures.clear()  # 清空 futures，防止再次使用
+
+    ########################################### GET RESULT ################################################
 
     def get_result(self, tolerance: float = 0.7, max_results: int = 10) -> list[list[int, int]]:
         '''
@@ -172,11 +182,11 @@ class ObjectDetection:
 
             # get the results of the rectangles as center points
             results = []
-            for rect in self.rectangles:
-                temp = []
-                temp.append((rect[0] + rect[2]) // 2)
-                temp.append((rect[1] + rect[3]) // 2)
-                results.append(temp)
+            for (x, y, w, h) in self.rectangles:
+                results.append([
+                    x + w // 2, 
+                    y + h // 2
+                ])
         return results
     
     # given a list of [x, y, w, h] rectangles and a canvas image to draw on, return an image with
@@ -216,8 +226,9 @@ class ObjectDetection:
 
         # these colors are actually BGR
         marker_color = (255, 0, 255)
-        marker_type = cv.MARKER_CROSS
+        marker_type = cv.MARKER_TILTED_CROSS
 
         for (center_x, center_y) in self.get_result():
             # draw the center point
-            cv.drawMarker(bacground_image, (center_x, center_y), marker_color, marker_type)
+            cv.drawMarker(bacground_image, (center_x, center_y), marker_color, marker_type, 25, 3)
+        return bacground_image
