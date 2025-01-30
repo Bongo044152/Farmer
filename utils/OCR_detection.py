@@ -50,6 +50,17 @@ class OCR_detection:
         _, binary = cv.threshold(gray, 150, 255, cv.THRESH_BINARY)
         data = pytesseract.image_to_data(binary, lang=language, output_type=pytesseract.Output.DICT)
 
+
+        # 檢查機制 : 至少找到一個 target_str 文字
+        found_target = False
+        for char in data['text']:
+            if char in target_str:
+                found_target = True
+                break
+        if not found_target:
+            print(f"Text '{target_str}' not found.")
+            return (0, 0, 0, 0)
+
         # 過濾訊息
         del data['level']
         del data['page_num']
