@@ -90,7 +90,7 @@ class OCR_detection:
             bottom = max(bottom, data['top'][i] + data['height'][i])
         
         width = right - left
-        height = buttom - top
+        height = bottom - top
 
         print(data)
 
