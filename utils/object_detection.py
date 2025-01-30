@@ -1,6 +1,7 @@
 # 外工具
 import cv2 as cv
 import numpy as np
+# import pyautogui
 
 # 內工具
 if __name__ == '__main__':
@@ -17,7 +18,6 @@ import concurrent.futures
 from threading import Lock
 
 ## ???
-from typing import Callable
 import os
 
 class ObjectDetection:
@@ -35,6 +35,9 @@ class ObjectDetection:
             raise FileNotFoundError(f"The file does not exist: {target_image_path}")
 
         self.neddle_image = cv.imread(target_image_path, cv.IMREAD_COLOR_BGR)
+        if not self.neddle_image.any():
+            raise ValueError(f"Failed to load image from path: {target_image_path}")
+        
         self.needle_w = self.neddle_image.shape[1]
         self.needle_h = self.neddle_image.shape[0]
 
@@ -44,10 +47,42 @@ class ObjectDetection:
         # Initialize thread pool executor
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
         self.futures = []  # 用來存放每個線程的 future 物件
+
+        self.ROI = False
     
     def update_background_image(self, background_image: np.ndarray) -> 'ObjectDetection':
-        self.screenshot = background_image
-        self.rectangles.clear()
+        self.background_img = background_image
+        self.rectangles = []
+        self.ROI = False
+        return self
+    
+    def enable_ROI(self, left_top: tuple[int, int], right_bottom: tuple[int, int]) -> 'ObjectDetection':
+        self.ROI = True
+
+        # 確保 ROI 大小大於目標圖像大小
+        roi_width = right_bottom[0] - left_top[0]
+        roi_height = right_bottom[1] - left_top[1]
+
+        if roi_width < self.needle_w or roi_height < self.needle_h:
+            raise ValueError(f"ROI size must be bigger than target image size. "
+                            f"Required: width >= {self.needle_w}, height >= {self.needle_h}, "
+                            f"but got: width = {roi_width}, height = {roi_height}")
+
+        self.ROIleft_top = left_top
+        self.ROIright_bottom = right_bottom
+
+        # 儲存原圖，並裁剪 ROI
+        self.original_background_img = self.background_img.copy()
+        x1, y1 = left_top
+        x2, y2 = right_bottom
+
+        # 裁剪背景圖像
+        self.background_img = self.background_img[y1:y2, x1:x2]
+
+        print(self.original_background_img.shape)
+        cv.imshow("ROI", self.background_img)
+        cv.waitKey(0)
+
         return self
 
     def hsl_filter_method(self, hsl_parms: dict, tolerance: float = 0.7, max_results: int = 10) -> 'ObjectDetection':
@@ -57,7 +92,7 @@ class ObjectDetection:
 
     def _hsl_filter_task(self, hsl_parms: dict, tolerance: float, max_results: int) -> None:
         hsvfilter = HsvFilter.create_by_dict(hsl_parms)
-        background_image = hsvfilter.apply_hsv_filter(self.screenshot)
+        background_image = hsvfilter.apply_hsv_filter(self.background_img)
         # neddle_image = hsvfilter.apply_hsv_filter(self.neddle_image)
         neddle_image = self.neddle_image
 
@@ -71,7 +106,7 @@ class ObjectDetection:
 
     def _edge_filter_task(self, edge_parms: dict, tolerance: float, max_results: int) -> None:
         edgefilter = EdgeFilter.create_by_dict(edge_parms)
-        background_image = edgefilter.apply_edge_filter(self.screenshot)
+        background_image = edgefilter.apply_edge_filter(self.background_img)
         # neddle_image = edgefilter.apply_edge_filter(self.neddle_image)
         neddle_image = self.neddle_image
 
@@ -85,7 +120,7 @@ class ObjectDetection:
 
     def _find_task(self, tolerance: float) -> None:
         try:
-            result = cv.matchTemplate(self.screenshot, self.neddle_image, self.method)
+            result = cv.matchTemplate(self.background_img, self.neddle_image, self.method)
             # get best match position
             min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
             if max_val > tolerance:
@@ -108,7 +143,7 @@ class ObjectDetection:
     def _find_muti_task(self, tolerance:float = 0.8, max_results: int = 5):
         try:
             with self.lock:
-                self.rectangles.extend(self.process_rectangles(self.screenshot, self.neddle_image , tolerance, max_results))
+                self.rectangles.extend(self.process_rectangles(self.background_img, self.neddle_image , tolerance, max_results))
         except Exception as e:
             print(e)
 
@@ -174,7 +209,19 @@ class ObjectDetection:
         # 等待所有異步線程執行完成
         self.end()
 
-        bacground_image = self.screenshot.copy()
+        # ROI 功能 -> 恢復背景圖像
+        if self.ROI:
+            self.ROI = False
+            self.background_img = self.original_background_img.copy()
+
+            # 調整矩形坐標以適應 ROI
+            for i, rect in enumerate(self.rectangles):
+                x, y, w, h = rect
+                # 將矩形坐標加上 ROI 左上角的偏移量
+                self.rectangles[i] = [x + self.ROIleft_top[0], y + self.ROIleft_top[1], w, h]
+
+        # 複製背景圖像以繪製矩形
+        bacground_image = self.background_img.copy()
 
         # these colors are actually BGR
         line_color = (0, 255, 0)
@@ -185,7 +232,7 @@ class ObjectDetection:
             top_left = (x, y)
             bottom_right = (x + w, y + h)
             # draw the box
-            cv.rectangle(bacground_image, top_left, bottom_right, line_color, lineType=line_type)
+            cv.rectangle(bacground_image, top_left, bottom_right, line_color, lineType=line_type, thickness=2)
 
         return bacground_image
 
@@ -196,23 +243,38 @@ class ObjectDetection:
         # 等待所有異步線程執行完成
         self.end()
 
+        # ROI 功能 -> 恢復背景圖像
+        if self.ROI:
+            self.ROI = False
+            self.background_img = self.original_background_img.copy()
+
+            # 調整矩形坐標以適應 ROI
+            for i, rect in enumerate(self.rectangles):
+                x, y, w, h = rect
+                # 將矩形坐標加上 ROI 左上角的偏移量
+                self.rectangles[i] = [x + self.ROIleft_top[0], y + self.ROIleft_top[1], w, h]
+
         if not self.rectangles:
             print("請確保事件的數理順序正確!")
             exit(-1)
 
-        bacground_image = self.screenshot.copy()
+        bacground_image = self.background_img.copy()
 
         # these colors are actually BGR
         marker_color = (255, 0, 255)
         marker_type = cv.MARKER_TILTED_CROSS
 
-        for (center_x, center_y) in self.get_result():
+        for (x, y, w, h) in self.rectangles:
+            center_x, center_y = [
+                x + w // 2,
+                y + h // 2
+            ]
             # draw the center point
             cv.drawMarker(bacground_image, (center_x, center_y), marker_color, marker_type, 25, 3)
         return bacground_image
     
     @property
-    def get_result(self, tolerance: float = 0.7, max_results: int = 10) -> list[list[int, int]]:
+    def get_result(self) -> list[list[int, int]]:
         '''
         @return : get click point / center point of elements =>
             [
@@ -225,21 +287,26 @@ class ObjectDetection:
         # 等待所有異步線程執行完成
         self.end()
 
-        with self.lock:
-            if self.rectangles:
-                # duplicate twice
-                self.rectangles.extend(self.rectangles)
-                self.rectangles = self.process_rectangles(self.screenshot, self.neddle_image , tolerance, max_results)
+        # ROI 功能 -> 恢復背景圖像
+        if self.ROI:
+            self.ROI = False
+            self.background_img = self.original_background_img.copy()
 
-            # get the results of the rectangles as center points
-            results = []
-            for (x, y, w, h) in self.rectangles:
-                results.append([
-                    x + w // 2, 
-                    y + h // 2
-                ])
+            # 調整矩形坐標以適應 ROI
+            for i, rect in enumerate(self.rectangles):
+                x, y, w, h = rect
+                # 將矩形坐標加上 ROI 左上角的偏移量
+                self.rectangles[i] = [x + self.ROIleft_top[0], y + self.ROIleft_top[1], w, h]
+        
+        # get the results of the rectangles as center points
+        results = []
+        for (x, y, w, h) in self.rectangles:
+            results.append([
+                x + w // 2, 
+                y + h // 2
+            ])
         return results
     
     @property
-    def get_res_item_len(self) -> int :
+    def get_item_len(self) -> int :
         return len(self.rectangles)

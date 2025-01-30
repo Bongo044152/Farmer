@@ -19,7 +19,7 @@ class WindowCapture:
     # offset_y = 0
 
     # constructor
-    def __init__(self, window_name=None):
+    def __init__(self, window_name:str = None) -> None :
         # create a thread lock object
         self.lock = Lock()
 
@@ -50,7 +50,7 @@ class WindowCapture:
         self.offset_x = window_rect[0] + self.cropped_x
         self.offset_y = window_rect[1] + self.cropped_y
 
-    def get_screenshot(self):
+    def get_screenshot(self) -> np.ndarray :
 
         # get the window image data
         wDC = win32gui.GetWindowDC(self.hwnd)
@@ -84,14 +84,15 @@ class WindowCapture:
         # see the discussion here:
         # https://github.com/opencv/opencv/issues/14866#issuecomment-580207109
         img = np.ascontiguousarray(img)
-
+        with self.lock:
+            self.screenshot = img
         return img
 
     # find the name of the window you're interested in.
     # once you have it, update window_capture()
     # https://stackoverflow.com/questions/55547940/how-to-get-a-list-of-the-name-of-every-open-window
     @staticmethod
-    def list_window_names():
+    def list_window_names() -> None :
         def winEnumHandler(hwnd, ctx):
             if win32gui.IsWindowVisible(hwnd):
                 print(hex(hwnd), win32gui.GetWindowText(hwnd))
@@ -107,16 +108,16 @@ class WindowCapture:
 
     # threading methods
 
-    def start(self):
+    def start(self) -> None :
         self.stopped = False
         self.screenshot = None
         t = Thread(target=self.run)
         t.start()
 
-    def end(self):
+    def end(self) -> None :
         self.stopped = True
 
-    def run(self):
+    def run(self) -> None :
         # TODO: you can write your own time/iterations calculation to determine how fast this is
         while not self.stopped:
             # get an updated image of the game

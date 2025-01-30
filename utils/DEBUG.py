@@ -1,6 +1,5 @@
 import numpy as np
 import cv2 as cv
-import pyautogui
 
 if __name__ == '__main__':
     from filter.hsvfilter import HsvFilter
@@ -10,41 +9,6 @@ else:
     from utils.filter.hsvfilter import HsvFilter
     from utils.filter.edgefilter import EdgeFilter
     from utils.windowcapture import WindowCapture
-
-def show_image(name: str, image: np.ndarray) -> None:
-    '''
-    顯示圖像並調整顯示窗口大小，防止圖像過大無法顯示。
-
-    @params:
-        name : str : 顯示圖像的窗口名稱。
-        image : np.ndarray : 需要顯示的圖像數組。
-    
-    @return:
-        None : 不返回任何內容。
-    '''
-    # 獲取屏幕分辨率
-    screen_width, screen_height = pyautogui.size()
-
-    # 取得圖像的寬和高
-    width = image.shape[1]
-    height = image.shape[0]
-
-    # 如果圖像尺寸大於屏幕 80%，則縮小圖像
-    if width > screen_width * 0.8:
-        width = int(width / 5 * 4)
-    if height > screen_height * 0.8:
-        height = int(height / 5 * 4)
-    
-    dim = (width, height)
-    resized_image = cv.resize(image, dim, interpolation=cv.INTER_AREA)
-    
-    # 設置顯示窗口的最小大小
-    n_x = max(400, width)
-    n_y = max(300, height)
-
-    # 顯示圖像並調整窗口大小
-    cv.imshow(name, resized_image)
-    cv.resizeWindow(name, n_x, n_y)
 
 class DEBUG:
     def __init__(self) -> None:
