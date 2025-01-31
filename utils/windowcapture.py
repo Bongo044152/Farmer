@@ -112,6 +112,7 @@ class WindowCapture:
         self.stopped = False
         self.screenshot = None
         t = Thread(target=self.run)
+        t.daemon = True
         t.start()
 
     def end(self) -> None :

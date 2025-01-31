@@ -2,7 +2,7 @@
 
 本專案用於幫助王農民自動化打遊戲，並提供相關的程式碼、工具和資源，主要用於私人用途，因此不提供詳細說明。
 
-<font color:"red">注意! 僅支持 windows 系統</font>
+<font color="red">注意! 僅支持 windows 系統</font>
 
 ## 功能
 

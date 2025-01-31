@@ -6,7 +6,7 @@ class MouseController:
     def __init__(self) -> None :
         pass
 
-    def rotate_perspective(self, x_offset: int, y_offset: int, duration: float = 1, steps: int = 100) -> None :
+    def rotate_perspective(self, x_offset: int, y_offset: int, duration: float = 1) -> None :
         """
         Rotate the game character's perspective by moving the mouse.
 
@@ -16,13 +16,8 @@ class MouseController:
         duration (float): Total time for the movement (seconds).
         steps (int): Number of steps for the movement.
         """
-        step_x = x_offset // steps
-        step_y = y_offset // steps
-        step_time = duration / steps
 
-        for _ in range(steps):
-            pydirectinput.moveRel(step_x, step_y)  # Relative mouse movement
-            time.sleep(step_time)
+        pydirectinput.moveRel(x_offset, y_offset, duration)
 
     @staticmethod
     def get_mouse_pos_by_click(right_bottom: tuple[int, int] = None ):
@@ -59,4 +54,5 @@ class MouseController:
                 break
 
 if __name__ == "__main__":
-    MouseController.get_mouse_pos_by_click((2559, 1599))
+    mouse = MouseController()
+    mouse.rotate_perspective(100,0)

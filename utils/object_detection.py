@@ -86,11 +86,11 @@ class ObjectDetection:
         return self
 
     def hsl_filter_method(self, hsl_parms: dict, tolerance: float = 0.7, max_results: int = 10) -> 'ObjectDetection':
-        future = self.executor.submit(self._hsl_filter_task, hsl_parms, tolerance, max_results)
+        future = self.executor.submit(self.__hsl_filter_task, hsl_parms, tolerance, max_results)
         self.futures.append(future)
         return self
 
-    def _hsl_filter_task(self, hsl_parms: dict, tolerance: float, max_results: int) -> None:
+    def __hsl_filter_task(self, hsl_parms: dict, tolerance: float, max_results: int) -> None:
         hsvfilter = HsvFilter.create_by_dict(hsl_parms)
         background_image = hsvfilter.apply_hsv_filter(self.background_img)
         # neddle_image = hsvfilter.apply_hsv_filter(self.neddle_image)
@@ -100,11 +100,11 @@ class ObjectDetection:
             self.rectangles.extend(self.process_rectangles(background_image, neddle_image, tolerance, max_results))
 
     def edge_filter_method(self, edge_parms: dict, tolerance: float = 0.7, max_results: int = 10) -> 'ObjectDetection':
-        future = self.executor.submit(self._edge_filter_task, edge_parms, tolerance, max_results)
+        future = self.executor.submit(self.__edge_filter_task, edge_parms, tolerance, max_results)
         self.futures.append(future)
         return self
 
-    def _edge_filter_task(self, edge_parms: dict, tolerance: float, max_results: int) -> None:
+    def __edge_filter_task(self, edge_parms: dict, tolerance: float, max_results: int) -> None:
         edgefilter = EdgeFilter.create_by_dict(edge_parms)
         background_image = edgefilter.apply_edge_filter(self.background_img)
         # neddle_image = edgefilter.apply_edge_filter(self.neddle_image)
@@ -114,11 +114,11 @@ class ObjectDetection:
             self.rectangles.extend(self.process_rectangles(background_image, neddle_image, tolerance, max_results))
     
     def find(self, tolerance: float = 0.85) -> 'ObjectDetection':
-        future = self.executor.submit(self._find_task, tolerance)
+        future = self.executor.submit(self.__find_task, tolerance)
         self.futures.append(future)
         return self
 
-    def _find_task(self, tolerance: float) -> None:
+    def __find_task(self, tolerance: float) -> None:
         try:
             result = cv.matchTemplate(self.background_img, self.neddle_image, self.method)
             # get best match position
@@ -135,12 +135,12 @@ class ObjectDetection:
 
 
     def find_muti(self, tolerance:float = 0.8, max_results: int = 5) -> 'ObjectDetection' :
-        future = self.executor.submit(self._find_muti_task, tolerance, max_results)
+        future = self.executor.submit(self.__find_muti_task, tolerance, max_results)
         self.futures.append(future)
 
         return self
     
-    def _find_muti_task(self, tolerance:float = 0.8, max_results: int = 5):
+    def __find_muti_task(self, tolerance:float = 0.8, max_results: int = 5):
         try:
             with self.lock:
                 self.rectangles.extend(self.process_rectangles(self.background_img, self.neddle_image , tolerance, max_results))
@@ -310,3 +310,6 @@ class ObjectDetection:
     @property
     def get_item_len(self) -> int :
         return len(self.rectangles)
+    
+if __name__ == '__main__':
+    ...
