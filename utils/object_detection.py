@@ -21,8 +21,16 @@ from threading import Lock
 import os
 
 class ObjectDetection:
+    '''
+    對圖片進行模板匹配，並返回匹配到的矩形範圍
+    '''
 
     def __init__(self, target_image_path: str, method: int = cv.TM_CCOEFF_NORMED) -> None:
+        '''
+        @params:
+            target_image_path: 目標圖像的路徑
+            method: 模板匹配的方法，默認為 cv.TM_CCOEFF_NORMED
+        '''
         # 線程保護
         self.lock = Lock()
 
@@ -51,6 +59,15 @@ class ObjectDetection:
         self.ROI = False
     
     def update_background_image(self, background_image: np.ndarray) -> 'ObjectDetection':
+        '''
+        上傳背景圖像
+
+        @params:
+            - background_image (np.ndarray): 背景圖像
+        
+        @return:
+            - self (ObjectDetection): 返回當前對象
+        '''
         self.background_img = background_image
         self.rectangles = []
         self.ROI = False
@@ -86,6 +103,17 @@ class ObjectDetection:
         return self
 
     def hsl_filter_method(self, hsl_parms: dict, tolerance: float = 0.7, max_results: int = 10) -> 'ObjectDetection':
+        '''
+        色彩過濾比對，搭配 DEBUG 工具一起使用: ./utils/debugger.py
+
+        @params:
+            - hsl_parms (dict): HSL 設定參數
+            - tolerance (float): 過濾容忍度，默認為 0.7
+            - max_results (int): 最多匹配結果，默認為 10
+        
+        @return:
+            - self (ObjectDetection): 返回當前對象
+        '''
         future = self.executor.submit(self.__hsl_filter_task, hsl_parms, tolerance, max_results)
         self.futures.append(future)
         return self
@@ -100,6 +128,17 @@ class ObjectDetection:
             self.rectangles.extend(self.process_rectangles(background_image, neddle_image, tolerance, max_results))
 
     def edge_filter_method(self, edge_parms: dict, tolerance: float = 0.7, max_results: int = 10) -> 'ObjectDetection':
+        '''
+        Canny 邊緣檢測過濾比對，搭配 DEBUG 工具一起使用: ./utils/debugger.py
+
+        @params:
+            - edge_parms (dict): Canny 邊緣檢測參數
+            - tolerance (float): 過濾容忍度，默認為 0.7
+            - max_results (int): 最多匹配結果，默認為 10
+        
+        @return:
+            - self (ObjectDetection): 返回當前對象
+        '''
         future = self.executor.submit(self.__edge_filter_task, edge_parms, tolerance, max_results)
         self.futures.append(future)
         return self
@@ -114,6 +153,15 @@ class ObjectDetection:
             self.rectangles.extend(self.process_rectangles(background_image, neddle_image, tolerance, max_results))
     
     def find(self, tolerance: float = 0.85) -> 'ObjectDetection':
+        '''
+        基礎的尋找方法，比較給定的背景圖像中是否存在特定對象 (只會返回一個匹配結果)
+
+        @params:
+            - tolerance (float): 匹配容忍度，默認為 0.85
+
+        @return:
+            - self (ObjectDetection): 返回當前對象
+        '''
         future = self.executor.submit(self.__find_task, tolerance)
         self.futures.append(future)
         return self
@@ -135,6 +183,16 @@ class ObjectDetection:
 
 
     def find_muti(self, tolerance:float = 0.8, max_results: int = 5) -> 'ObjectDetection' :
+        '''
+        基於基礎的 find 方法，進行簡單的升級，可以尋找多個相同對象 (可以返回多個匹配結果)
+
+        @params:
+            - tolerance (float): 匹配容忍度，默認為 0.8
+            - max_results (int): 最多匹配結果，默認為 5
+
+        @return:
+            - self (ObjectDetection): 返回當前對象
+        '''
         future = self.executor.submit(self.__find_muti_task, tolerance, max_results)
         self.futures.append(future)
 
@@ -197,6 +255,7 @@ class ObjectDetection:
         return rectangles
 
     def end(self):
+        '''輔助線程管理工具，等待所有相關線程結束'''
         concurrent.futures.wait(self.futures)
         self.futures.clear()  # 清空 futures，防止再次使用
 
@@ -205,6 +264,14 @@ class ObjectDetection:
     # given a list of [x, y, w, h] rectangles and a canvas image to draw on, return an image with
     # all of those rectangles drawn
     def debug_draw_rectangles(self) -> np.ndarray:
+        '''
+        debug 模式，繪製矩形框來表示目標位置
+
+        @params:
+            None
+        @return:
+            bacground_image (np.ndarray): 背景圖像，包含所有矩形框
+        '''
 
         # 等待所有異步線程執行完成
         self.end()
@@ -239,6 +306,14 @@ class ObjectDetection:
     # given a list of [x, y] positions and a canvas image to draw on, return an image with all
     # of those click points drawn on as crosshairs
     def debug_draw_crosshairs(self) -> np.ndarray:
+        '''
+        debug 模式，繪製叉叉來表示目標位置
+
+        @params:
+            None
+        @return:
+            bacground_image (np.ndarray): 背景圖像，包含所有叉叉
+        '''
 
         # 等待所有異步線程執行完成
         self.end()
@@ -253,10 +328,6 @@ class ObjectDetection:
                 x, y, w, h = rect
                 # 將矩形坐標加上 ROI 左上角的偏移量
                 self.rectangles[i] = [x + self.ROIleft_top[0], y + self.ROIleft_top[1], w, h]
-
-        if not self.rectangles:
-            print("請確保事件的數理順序正確!")
-            exit(-1)
 
         bacground_image = self.background_img.copy()
 
@@ -307,9 +378,29 @@ class ObjectDetection:
             ])
         return results
     
-    @property
-    def get_item_len(self) -> int :
+    def __len__(self):
         return len(self.rectangles)
     
 if __name__ == '__main__':
-    ...
+    # 搜尋圖片中的所有資料夾
+    target = ObjectDetection('./img/test1.png') # 創建搜尋目標
+
+    # 引入拍照精靈
+    from windowcapture import WindowCapture
+
+    wincap = WindowCapture()
+    img = wincap.get_screenshot() # 螢幕截圖
+
+    # 搜尋
+    target.update_background_image(wincap.screenshot) # 上傳背景圖片
+    target.find_muti(0.5, 10) # 搜尋多個目標
+
+    # 繪製矩形框
+    target.debug_draw_rectangles()
+
+    # 繪製叉叉
+    return_img = target.debug_draw_crosshairs()
+
+    # 顯示圖片
+    from img_process import Img_helper
+    Img_helper.show_img(return_img)

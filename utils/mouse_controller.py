@@ -20,7 +20,7 @@ class MouseController:
         pydirectinput.moveRel(x_offset, y_offset, duration)
 
     @staticmethod
-    def get_mouse_pos_by_click(right_bottom: tuple[int, int] = None ):
+    def get_mouse_pos_by_click(right_bottom: tuple[int, int] = None, sensitive:float = 0.3) -> None :
         if not right_bottom:
             print("使用這個功能前，請確保你已經進行過校正!")
         
@@ -49,10 +49,9 @@ class MouseController:
                 x *= scale_x
                 y *= scale_y
                 print(f"滑鼠點擊位置：({x}, {y})")
-                time.sleep(0.1)  # 防止多次觸發
+                time.sleep(sensitive)  # 防止多次觸發
             elif ctypes.windll.user32.GetAsyncKeyState(0x04) & 0x8000:  # 0x04 是中鍵
                 break
 
 if __name__ == "__main__":
-    mouse = MouseController()
-    mouse.rotate_perspective(100,0)
+    MouseController.get_mouse_pos_by_click()

@@ -70,11 +70,25 @@ class KeyboardController:
         # 任務處理結束，設置為 False
         self.processing = False
 
+# 使用範例
 if __name__ == "__main__":
+    # 創建物件
     keyboard = KeyboardController()
+
+    # 按下 w 鍵
     t = 1  # 設定持續按下時間
     keyboard.press_key("w", t)
+    keyboard.press_key('a') # 點擊 a 鍵 一次
+
+    # 其他事情 -> main thread
+    for _ in range(5):
+        print(666)
+        time.sleep(0.1)
+
+    # 等待所有指派給 keyboard 的任務完成
     keyboard.wait()
+
+    # 結束
     print("END")
 
-# wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+# 

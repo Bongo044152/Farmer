@@ -1,5 +1,6 @@
 import numpy as np
 import win32gui, win32ui, win32con
+import pyautogui
 from threading import Thread, Lock
 
 
@@ -27,6 +28,7 @@ class WindowCapture:
         # if no window name is given, capture the entire screen
         if window_name is None:
             self.hwnd = win32gui.GetDesktopWindow()
+            self.w, self.h = pyautogui.size()
         else:
             self.hwnd = win32gui.FindWindow(None, window_name)
             if not self.hwnd:
@@ -34,9 +36,10 @@ class WindowCapture:
 
         # get the window size
         window_rect = win32gui.GetWindowRect(self.hwnd)
-        self.w = window_rect[2] - window_rect[0]
-        self.h = window_rect[3] - window_rect[1]
-
+        if not self.w or not self.h:
+            self.w = window_rect[2] - window_rect[0]
+            self.h = window_rect[3] - window_rect[1]
+        
         # account for the window border and titlebar and cut them off
         border_pixels = 0 # 8
         titlebar_pixels = 0 # 30

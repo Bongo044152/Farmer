@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-import pyautogui
+import pyautogui, os
 
 class Img_helper:
     def __init__(self) -> None:
@@ -30,14 +30,19 @@ class Img_helper:
             height = int(height / 5 * 4)
             dim = (width, height)
             image = cv.resize(image, dim, interpolation=cv.INTER_AREA)
-        
         # 設置顯示窗口的最小大小
-        n_x = max(400, width)
-        n_y = max(300, height)
+        elif width < 400 or height < 300:
+            if width > height:
+                scale = 400 / width
+            else:
+                scale = 300 / height
+            width = int(width * scale)
+            height = int(height * scale)
+            dim = (width, height)
+            image = cv.resize(image, dim, interpolation=cv.INTER_AREA)
 
         # 顯示圖像並調整窗口大小
         cv.imshow(name, image)
-        cv.resizeWindow(name, n_x, n_y)
         if once:
             cv.waitKey(0)
             cv.destroyAllWindows()
@@ -67,14 +72,23 @@ class Img_helper:
         @return:
             img : np.ndarray : 讀取到的圖像數組，形式為 BGR。
         '''
-        img = cv.imread(path, cv.IMREAD_COLOR_BGR)
-        if img.any() == None:
+        if not os.path.isabs(path):
+            path = os.path.abspath(path)
+
+        if not os.path.exists(path):
             raise Exception(f"Image not found : {path}")
-        return img
+        else:
+            path = os.path.abspath(path)
+            img = cv.imread(path, cv.IMREAD_COLOR_BGR)
+            return img
 
 
 if __name__ == "__main__":
-    image = Img_helper.load_img("./img/test1.png")
-    print("Hello World !")
-    Img_helper.show_img("test", image)
-    print("this is a string for testing ...")
+    # 範例一: 仔入圖像
+    my_img = Img_helper.load_img("./img/test2.png")
+
+    # 範例二: 顯示圖像
+    Img_helper.show_img(my_img, name="My Image", once=True) # once=True 表示顯示一次並等待關閉窗口，差別救世會等待你關閉窗口才會執行後續程序
+
+    # 範例三: 保存圖像
+    Img_helper.save_img(my_img, "./img/test2_copy.png")
