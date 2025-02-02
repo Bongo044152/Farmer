@@ -54,4 +54,5 @@ class MouseController:
                 break
 
 if __name__ == "__main__":
+    # 使用前記得校準
     MouseController.get_mouse_pos_by_click()

@@ -96,10 +96,6 @@ class ObjectDetection:
         # 裁剪背景圖像
         self.background_img = self.background_img[y1:y2, x1:x2]
 
-        print(self.original_background_img.shape)
-        cv.imshow("ROI", self.background_img)
-        cv.waitKey(0)
-
         return self
 
     def hsl_filter_method(self, hsl_parms: dict, tolerance: float = 0.7, max_results: int = 10) -> 'ObjectDetection':
