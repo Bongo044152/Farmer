@@ -53,6 +53,7 @@ class MouseController:
             elif ctypes.windll.user32.GetAsyncKeyState(0x04) & 0x8000:  # 0x04 是中鍵
                 break
 
+# 使用範例
 if __name__ == "__main__":
     # 使用前記得校準
     MouseController.get_mouse_pos_by_click()

@@ -376,7 +376,8 @@ class ObjectDetection:
     
     def __len__(self):
         return len(self.rectangles)
-    
+
+# 使用範例  
 if __name__ == '__main__':
     # 搜尋圖片中的所有資料夾
     target = ObjectDetection('./img/test1.png') # 創建搜尋目標

@@ -3,21 +3,7 @@ import win32gui, win32ui, win32con
 import pyautogui
 from threading import Thread, Lock
 
-
 class WindowCapture:
-
-    # # threading properties
-    # stopped = True
-    # lock = None
-    # screenshot = None
-    # # properties
-    # w = 0
-    # h = 0
-    # hwnd = None
-    # cropped_x = 0
-    # cropped_y = 0
-    # offset_x = 0
-    # offset_y = 0
 
     # constructor
     def __init__(self, window_name:str = None) -> None :
@@ -129,3 +115,18 @@ class WindowCapture:
             # lock the thread while updating the results
             with self.lock:
                 self.screenshot = screenshot
+
+# 使用範例
+if __name__ == '__main__':
+    from img_process import Img_helper # 圖片顯示工具
+
+    # 創建拍照精靈
+    wincap = WindowCapture()
+    img_from_wincap = wincap.get_screenshot() # 取得螢幕截圖
+
+    # 註記: wincap.get_screenshot() 取得照片後， 可以透過 wincap.screenshot 來取出
+    # 不需要使用 img_from_wincap = wincap.get_screenshot() 的方式額外創建一個變數
+    if np.array_equal(img_from_wincap, wincap.screenshot): # 如果兩張照片相同
+        print("我們其實是一樣的!")                          # 輸出: "我們其實是一樣的!"
+
+    Img_helper.show_img(wincap.screenshot) # 顯示圖片

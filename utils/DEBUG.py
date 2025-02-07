@@ -183,11 +183,4 @@ def edge_filter_debug(dictionary: dict = None) -> None:
 
 # 程式執行的地方
 if __name__ == '__main__':
-    e = {
-        "KernelSize": 10,
-        "ErodeIter": 1,
-        "DilateIter": 0,
-        "Canny1": 200,
-        "Canny2": 500
-    }
-    edge_filter_debug(e)
+    edge_filter_debug()

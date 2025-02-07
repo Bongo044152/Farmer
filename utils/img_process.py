@@ -82,13 +82,14 @@ class Img_helper:
             img = cv.imread(path, cv.IMREAD_COLOR_BGR)
             return img
 
-
+# 使用範例
 if __name__ == "__main__":
     # 範例一: 仔入圖像
-    my_img = Img_helper.load_img("./img/test2.png")
+    my_img = Img_helper.load_img("./img/test2.png") # 需要告訴她你要的路徑在哪裡，他會返回一個圖片 -> 存放在 my_img 這個變數當中
 
     # 範例二: 顯示圖像
+    # 接受 '圖片' 作為參數，並非圖片路徑 (即表示已經仔入好的圖片)
     Img_helper.show_img(my_img, name="My Image", once=True) # once=True 表示顯示一次並等待關閉窗口，差別救世會等待你關閉窗口才會執行後續程序
 
     # 範例三: 保存圖像
-    Img_helper.save_img(my_img, "./img/test2_copy.png")
+    Img_helper.save_img(my_img, "./img/test2_copy.png") # 告訴程式你要保存到哪裡? 叫什麼名子? 用什麼格式? -> ./img/test2_copy.png (位置/名稱.格式)
